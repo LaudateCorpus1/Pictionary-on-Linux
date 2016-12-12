@@ -17,7 +17,7 @@ extern int main(int argc, char* argv[]) {
 			"not enough argument. \n"
 			"usage: \n"
 			"[%s -w <IP>] for writer \n"
-			"[%s -r] for reader \n", 
+			"[%s -r <whatever>] for reader \n", 
 			argv[0], argv[0]
 		);
 		return 1;
@@ -48,6 +48,8 @@ extern int main(int argc, char* argv[]) {
 		pthread_create(&thid[1], NULL, Thread2Reader, NULL);  // ipc (듣는다: 소켓 입력 받음)
 		printf("hello there \n");
 	}
+
+	for (;;);
 
 	/*
 	for (i = 0; i < N_THREADS; ++i) {
