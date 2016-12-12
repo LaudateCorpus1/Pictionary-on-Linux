@@ -42,7 +42,7 @@ extern void ClientInitSock(char* ip) {
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = inet_addr(ip);
-	serv_addr.sin_port = htons(atoi(PORT));
+	serv_addr.sin_port = htons(PORT);
 
 	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) // 소켓 연결
 		error_handling("connect() error");
