@@ -8,9 +8,10 @@
 #define PORT				9000
 static pthread_t t_id; // accept() 수행 뒤에 생성되는 각각의 연결에 대한 스레드
 
+// extern
 // sock : 변수명 그대로 옮겨옴
-extern int sock; // 클라이언트 프로세스가 사용
-extern int serv_sock; // 서버 프로세스가 사용
+int sock; // 클라이언트 프로세스가 사용
+int serv_sock; // 서버 프로세스가 사용
 
 // sock (server) : 변수명 그대로 옮겨옴
 #define MAX_CLNT 256
@@ -45,7 +46,7 @@ extern void ClientInitSock(char* ip) {
 	serv_addr.sin_port = htons(PORT);
 
 	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) // 소켓 연결
-		error_handling("connect() error");
+		fatal("connect() error");
 }
 
 // 클라이언트 프로세스에서 수행
@@ -53,14 +54,13 @@ extern void ClientInitSock(char* ip) {
 extern void SndPath(int _index, int _x, int _y, int _color, int _width) {
 	struct path buf;
 	// copy path
-	buf.data_type = MSGTYPE_PATH;
 	buf.index = _index;
 	buf.x = _x;
 	buf.y = _y;
 	buf.color = _color;
 	buf.width = _width;
 	// send it to socket
-	write(sock, buf, sizeof(buf));
+	write(sock, &buf, sizeof(buf));
 }
 
 ////////////////////////////////// 이하 서버 프로세스 ////////////////////////////////// 
@@ -94,9 +94,10 @@ static void RcvPath(struct path rcvpath) {
 static void *handle_clnt(void *arg) {
 	int i, str_len = 0;
 	struct path buf;
+	int clnt_sock = 0;
 
 	// 읽어: 연결이 유지되는 한 계속 통신할 것을 지시
-	for (;(str_len = read(*((int*)arg), buf, sizeof(buf))) != 0;) {
+	for (;(str_len = read(*((int*)arg), &buf, sizeof(buf))) != 0;) {
 		RcvPath(buf);
 		RepaintPath();
 	}
@@ -114,6 +115,8 @@ static void *handle_clnt(void *arg) {
 	clnt_cnt--;
 	pthread_mutex_unlock(&mutx);
 	close(clnt_sock);
+
+	return NULL;
 }
 
 // 정답을 맞히는 측(reader)이 메시지를 듣게 함
@@ -121,9 +124,9 @@ static void *handle_clnt(void *arg) {
 // (메시지의 전송은 메시지가 발생한 이벤트에서 수행하는 것이 옳다)
 static void ServerLoopAccept() {
 	// 소켓용 임시변수
-	int clnt_adr_sz;
+	unsigned int clnt_adr_sz;
 	struct sockaddr_in clnt_adr;
-	int clnt_sock;
+	int clnt_sock = 0;
 
 	// 그린 데이터를 읽는다
 	for (;;) {
@@ -142,18 +145,20 @@ static void ServerLoopAccept() {
 
 // 서버 프로세스
 static void ServerInitSock() {
+	struct sockaddr_in serv_adr;
+
 	pthread_mutex_init(&mutx, NULL);
 	serv_sock = socket(PF_INET, SOCK_STREAM, 0); // 소켓 생성
 
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
 	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serv_adr.sin_port = htons(atoi(PORT));
+	serv_adr.sin_port = htons(PORT);
 
 	if (bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr)) == -1) // 바인드: 포트 엮어
-		error_handling("bind() error");
+		fatal("bind() error");
 	if (listen(serv_sock, 5) == -1) // accept() 가능한 상태로 한다
-		error_handling("listen() error");
+		fatal("listen() error");
 }
 
 // 서버 프로세스에서 실행한다.
