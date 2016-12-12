@@ -17,6 +17,10 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+//
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 typedef enum bool{ false, true } bool;
 
@@ -57,6 +61,10 @@ extern GC				gc;
 extern int				lineWidth;
 extern int				color;
 
+// socket
+extern int				sock;
+extern int				serv_sock, clnt_sock;
+
 // ipc
 extern char				strAnswerCorrect[100];
 extern bool				isDrawer;
@@ -84,24 +92,16 @@ extern int GetWidthPick(XEvent);
 extern void SetForegroundToColorIndex(int i);
 extern void SetLineWidth(int width);
 
-// typo
-extern void TypoSetInputAnswer();
-extern void TypoInputLoopWriter();
-extern void TypoInputLoopReader();
-
 // ipc
 extern void SndPath(int _index, int _x, int _y, int _color, int _width);
-extern void SndAnswerCorrect(char *strAnswer);
-extern void SndGameOver();
+extern void ClientInitSock(char* ip);
+
 
 // init
 extern void InitDisplay();
-extern void IpcInit();
-extern void IpcInitClear();
 
 // threads
 extern void *Thread1();
-extern void *Thread2Writer();
 extern void *Thread2Reader();
 
 

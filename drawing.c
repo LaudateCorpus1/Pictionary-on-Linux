@@ -176,7 +176,7 @@ extern void Clear() {
 	indexPath = 0;
 	// 통신 추가
 	if (isDrawer) {
-		SndPath(-1, -1, -1, 0, 0);
+		SndPath(-1, -1, -1, color, lineWidth);
 	}
 }
 
@@ -200,7 +200,8 @@ extern bool EventCursorIsBeingClicked(XEvent xe) {
 	return xe.xmotion.state & Button1Mask;
 }
 
-// Clear 버튼이 눌렸는지 여부 반환
+// 
+버튼이 눌렸는지 여부 반환
 extern bool GetClearPick(XEvent xe) {
 	int i = MAX_COLOR;
 	return xe.xmotion.x > MARGIN + (BRUSH_AREA_X * i) && xe.xmotion.x < MARGIN + (BRUSH_AREA_X * i) + BRUSH_ITEM_WIDTH;

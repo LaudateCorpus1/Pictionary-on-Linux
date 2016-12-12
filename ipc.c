@@ -1,37 +1,30 @@
-// ipc1 : 그리는 입장
 // ipc.c : 프로세스간 통신
 #include "header.h"
 
-#define KEY				(key_t)600201
-#define PERMISSION		IPC_CREAT | 0660
 #define MSGTYPE_PATH		1
 #define MSGTYPE_ANSWER		2
 #define MSGTYPE_GAMEOVER	3
-static int qid;
+
+#define PORT				9000
+static pthread_t t_id; // accept() 수행 뒤에 생성되는 각각의 연결에 대한 스레드
+
+// sock : 변수명 그대로 옮겨옴
+extern int sock; // 클라이언트 프로세스가 사용
+extern int serv_sock; // 서버 프로세스가 사용
+
+// sock (server) : 변수명 그대로 옮겨옴
+#define MAX_CLNT 256
+static int clnt_cnt = 0;
+static int clnt_socks[MAX_CLNT];
+static pthread_mutex_t mutx;
 
 // 주고 받을 데이터: 그린 점
 struct path {
-	long	data_type;
 	int		index;
 	int		x;
 	int		y;
 	int		color;
 	int		width;
-};
-
-// 주고 받을 데이터: 정답
-struct answer {
-	long	data_type;
-	int n;
-	char	str[100];
-};
-
-#define YO 100 // 관련: struct gameover
-
-// reader가 정답을 맞히면 게임이 끝났음을 알리는 메시지
-struct gameover {
-	long data_type;
-	int yo;
 };
 
 // 오류
@@ -40,55 +33,22 @@ static void fatal(char *err) {
 	exit(0);
 }
 
-// 큐를 비운다
-static void ClearQueue() {
-	struct path buf1;
-	struct answer buf2;
-	struct gameover buf3;
-	for (;msgrcv(qid, &buf1, sizeof(struct path) - sizeof(long), MSGTYPE_PATH, IPC_NOWAIT) == 0;);
-	for (;msgrcv(qid, &buf2, sizeof(struct answer) - sizeof(long), MSGTYPE_ANSWER, IPC_NOWAIT) == 0;);
-	for (;msgrcv(qid, &buf3, sizeof(struct gameover) - sizeof(long), MSGTYPE_GAMEOVER, IPC_NOWAIT) == 0;);
+// 클라이언트 프로세스
+extern void ClientInitSock(char* ip) {
+	struct sockaddr_in serv_addr;
+
+	sock = socket(PF_INET, SOCK_STREAM, 0); // 소켓 생성
+
+	memset(&serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = inet_addr(ip);
+	serv_addr.sin_port = htons(atoi(PORT));
+
+	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) // 소켓 연결
+		error_handling("connect() error");
 }
 
-// includes msgctl() msgget()
-extern void IpcInit() {
-	msgctl(qid, IPC_RMID, NULL);
-	if (-1 == (qid = msgget(KEY, PERMISSION))) {
-		fatal("failed to init queue");
-	}
-}
-
-// includes msgctl() msgget() // ClearQueue()
-extern void IpcInitClear() {
-	msgctl(qid, IPC_RMID, NULL);
-	if (-1 == (qid = msgget(KEY, PERMISSION))) {
-		fatal("failed to init queue");
-	}
-	ClearQueue();
-}
-
-// 게임 끝내기
-extern void SndGameOver() {
-	struct gameover buf;
-	buf.data_type = MSGTYPE_GAMEOVER;
-	buf.yo = YO;
-	if (-1 == msgsnd(qid, &buf, sizeof(struct gameover) - sizeof(long), 0)) {
-		fatal("SndGameOver msgsnd() failed");
-	}
-}
-
-// 정답 설정하기
-extern void SndAnswerCorrect(char *strAnswer) {
-	struct answer buf;
-	//
-	buf.data_type = MSGTYPE_ANSWER;
-	sprintf(buf.str, "%s", strAnswer); // strcpy(buf.str, strAnswer);
-	printf("%s \n", buf.str);
-	if (-1 == msgsnd(qid, &buf, sizeof(struct answer) - sizeof(long), 0)) {
-		fatal("SndAnswerCorrect msgsnd() failed");
-	}
-}
-
+// 클라이언트 프로세스에서 수행
 // 그린 지점 한 단위를 메시지 전송
 extern void SndPath(int _index, int _x, int _y, int _color, int _width) {
 	struct path buf;
@@ -99,11 +59,14 @@ extern void SndPath(int _index, int _x, int _y, int _color, int _width) {
 	buf.y = _y;
 	buf.color = _color;
 	buf.width = _width;
-	if (-1 == msgsnd(qid, &buf, sizeof(struct path) - sizeof(long), 0)) {
-		fatal("SndPath msgsnd() failed");
-	}
+	// send it to socket
+	write(sock, buf, sizeof(buf));
 }
 
+////////////////////////////////// 이하 서버 프로세스 ////////////////////////////////// 
+// 코드는 거꾸로 읽을 것
+
+// 서버 프로세스에서 수행
 // 받은 그린 데이터(구조체 메시지; 점 하나)를 풀어서 저장
 static void RcvPath(struct path rcvpath) {
 	if (indexPath >= MAX_INDEX_PATH) { return; } // 여분의 공간이 없으면 추가할 수 없음
@@ -124,59 +87,81 @@ static void RcvPath(struct path rcvpath) {
 	}
 }
 
-// 문제를 내고 그리는 측(writer)이 메시지를 듣게 함
-// ("Loop"은 쓰기(메시지의 발생)가 아닌 듣게(읽게) 하기 위한 것... 타이머 이벤트가 아닌 이상)
-// (메시지의 전송은 메시지가 발생한 이벤트에서 수행하는 것이 옳다)
-static void IpcLoopWriter() {
-	struct gameover buf;
+// 서버 프로세스에서 실행한다.
+// 하나의 스레드 루틴이다.
+// accept된 해당 연결에 대해서 처리하는 코드루틴(함수)이다.
+// 인자는 accept()가 반환한 해당 연결의 소켓 디스크립터다.
+static void *handle_clnt(void *arg) {
+	int i, str_len = 0;
+	struct path buf;
 
-	// gameover 메시지를 체크하다가 받는 순간 게임 끝낸다
-	for (;;) {
-		if (-1 == msgrcv(qid, &buf, sizeof(struct path) - sizeof(long), MSGTYPE_GAMEOVER, 0)) {
-			fatal("failed to msgrcv()");
-		}
-		if (buf.yo == YO) {
-			bGameOver = true;
+	// 읽어: 연결이 유지되는 한 계속 통신할 것을 지시
+	for (;(str_len = read(*((int*)arg), buf, sizeof(buf))) != 0;) {
+		RcvPath(buf);
+		RepaintPath();
+	}
+
+	// 이 연결을 해제하고 메모리-관리배열에서 축출한다
+	pthread_mutex_lock(&mutx);
+	for (i = 0; i<clnt_cnt; i++) {
+		if (clnt_sock == clnt_socks[i])
+		{
+			while (i++<clnt_cnt - 1)
+				clnt_socks[i] = clnt_socks[i + 1];
+			break;
 		}
 	}
-} // func
+	clnt_cnt--;
+	pthread_mutex_unlock(&mutx);
+	close(clnt_sock);
+}
 
 // 정답을 맞히는 측(reader)이 메시지를 듣게 함
 // ("Loop"은 쓰기(메시지의 발생)가 아닌 듣게(읽게) 하기 위한 것... 타이머 이벤트가 아닌 이상)
 // (메시지의 전송은 메시지가 발생한 이벤트에서 수행하는 것이 옳다)
-static void IpcLoopReader() {
-	struct path buf;
-
-	// 먼저 제시어를 읽어들인다
-	struct answer buf_answer;
-	if (-1 == msgrcv(qid, &buf_answer, sizeof(buf_answer) - sizeof(long), MSGTYPE_ANSWER, 0)) {
-		fatal("failed to msgrcv()");
-	}
-	strcpy(strAnswerCorrect, buf_answer.str);
-	printf("debug: ans: %s \n", strAnswerCorrect);
+static void ServerLoopAccept() {
+	// 소켓용 임시변수
+	int clnt_adr_sz;
+	struct sockaddr_in clnt_adr;
+	int clnt_sock;
 
 	// 그린 데이터를 읽는다
 	for (;;) {
-		if (-1 == msgrcv(qid, &buf, sizeof(struct path) - sizeof(long), MSGTYPE_PATH, 0)) {
-			fatal("failed to msgrcv()");
-		}
-		RcvPath(buf);
-		RepaintPath();
+		clnt_adr_sz = sizeof(clnt_adr);
+		clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr, &clnt_adr_sz);
+
+		pthread_mutex_lock(&mutx);
+		clnt_socks[clnt_cnt++] = clnt_sock;
+		pthread_mutex_unlock(&mutx);
+
+		pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);
+		pthread_detach(t_id);
+		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));
 	}
 } // func
 
-// 이 루틴을 writer(그리는 측)만이 호출한다
-extern void *Thread2Writer() {
-	IpcLoopWriter();
-	pthread_exit(NULL);
+// 서버 프로세스
+static void ServerInitSock() {
+	pthread_mutex_init(&mutx, NULL);
+	serv_sock = socket(PF_INET, SOCK_STREAM, 0); // 소켓 생성
+
+	memset(&serv_adr, 0, sizeof(serv_adr));
+	serv_adr.sin_family = AF_INET;
+	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_adr.sin_port = htons(atoi(PORT));
+
+	if (bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr)) == -1) // 바인드: 포트 엮어
+		error_handling("bind() error");
+	if (listen(serv_sock, 5) == -1) // accept() 가능한 상태로 한다
+		error_handling("listen() error");
 }
 
-// 이 루틴을 reader(읽는 측)만이 호출한다
+// 서버 프로세스에서 실행한다.
+// 즉 이 루틴을 reader(읽는 측)만이 호출한다.
 extern void *Thread2Reader() {
-	IpcLoopReader();
+	ServerInitSock();
+	ServerLoopAccept();
 	pthread_exit(NULL);
 }
 
-
-// 프로그램은 writer(그리는 측)를 먼저 실행한 뒤 reader(읽는 측)를 실행해야 한다
-
+// 거꾸로 읽을 것!
