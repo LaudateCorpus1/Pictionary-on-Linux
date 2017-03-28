@@ -9,11 +9,11 @@
 static pthread_t t_id; // accept() 수행 뒤에 생성되는 각각의 연결에 대한 스레드
 
 // extern
-// sock : 변수명 그대로 옮겨옴
+// sock :
 int sock; // 클라이언트 프로세스가 사용
 int serv_sock; // 서버 프로세스가 사용
 
-// sock (server) : 변수명 그대로 옮겨옴
+// sock (server) :
 #define MAX_CLNT 256
 static int clnt_cnt = 0;
 static int clnt_socks[MAX_CLNT];
