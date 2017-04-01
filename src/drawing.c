@@ -1,4 +1,4 @@
-// drawing.c ¸ğµç ÀÚÀßÇÑ (¹Ì½ÃÀûÀÎ) ±×¸®´Â Ã³¸®¿Í ±×¿¡ ¿¬°üµÈ °Í
+// drawing.c ëª¨ë“  ìì˜í•œ (ë¯¸ì‹œì ì¸) ê·¸ë¦¬ëŠ” ì²˜ë¦¬ì™€ ê·¸ì— ì—°ê´€ëœ ê²ƒ
 #include "header.h"
 
 //////////////////// color ////////////////////
@@ -26,21 +26,21 @@ static unsigned long UsrColorPixel(char *name) {  // get color
 	return (c0.pixel);
 }
 
-// GCÀÇ ¼±ÀÇ »ö»óÀ» ÁöÁ¤
+// GCì˜ ì„ ì˜ ìƒ‰ìƒì„ ì§€ì •
 extern void SetForegroundToColorIndex(int i) {
 	color = UsrColorPixel(color_name[i]);
 	XSetForeground(dpy, gc, color);
 }
 
 /*
-// GCÀÇ ¼±ÀÇ »ö»óÀ» ÁöÁ¤
+// GCì˜ ì„ ì˜ ìƒ‰ìƒì„ ì§€ì •
 static void SetForegroundToColorName(char* name) {
 	color = UsrColorPixel(name);
 	XSetForeground(dpy, gc, color);
 }
 */
 
-// GCÀÇ ¼±ÀÇ »ö»óÀ» ÁöÁ¤
+// GCì˜ ì„ ì˜ ìƒ‰ìƒì„ ì§€ì •
 static void SetForegroundToColor(unsigned long _color) {
 	color = _color;
 	XSetForeground(dpy, gc, color);
@@ -48,7 +48,7 @@ static void SetForegroundToColor(unsigned long _color) {
 
 //////////////////// ////////////////////
 
-// GCÀÇ ¼±ÀÇ ±½±â¸¦ ÁöÁ¤
+// GCì˜ ì„ ì˜ êµµê¸°ë¥¼ ì§€ì •
 extern void SetLineWidth(int width) {
 	XGCValues gv;
 	lineWidth = width;
@@ -56,18 +56,18 @@ extern void SetLineWidth(int width) {
 	XChangeGC(dpy, gc, GCLineWidth, &gv);
 }
 
-// path¿¡ Á¡ ÇÏ³ª¸¦ Ãß°¡ÇÔ
+// pathì— ì  í•˜ë‚˜ë¥¼ ì¶”ê°€í•¨
 extern void ContinuePath(int x, int y) {
-	if (indexPath >= MAX_INDEX_PATH) { return; } // ¿©ºĞÀÇ °ø°£ÀÌ ¾øÀ¸¸é Ãß°¡ÇÒ ¼ö ¾øÀ½
-	// ÇöÀçÀ§Ä¡ ÀúÀå
+	if (indexPath >= MAX_INDEX_PATH) { return; } // ì—¬ë¶„ì˜ ê³µê°„ì´ ì—†ìœ¼ë©´ ì¶”ê°€í•  ìˆ˜ ì—†ìŒ
+	// í˜„ì¬ìœ„ì¹˜ ì €ì¥
 	path[indexPath].x = x;
 	path[indexPath].y = y;
-	// ÇöÀçÀ§Ä¡¿Í ÇÔ²² ´Ù¸¥ (Ãß°¡) Á¤º¸ ÀúÀå
+	// í˜„ì¬ìœ„ì¹˜ì™€ í•¨ê»˜ ë‹¤ë¥¸ (ì¶”ê°€) ì •ë³´ ì €ì¥
 	pathColor[indexPath] = color;
 	pathWidth[indexPath] = lineWidth;
-	// ´ÙÀ½À¸·Î (ÇöÀçÀ§Ä¡´Â Á÷ÀüÀ§Ä¡°¡ µÈ´Ù)
+	// ë‹¤ìŒìœ¼ë¡œ (í˜„ì¬ìœ„ì¹˜ëŠ” ì§ì „ìœ„ì¹˜ê°€ ëœë‹¤)
 	++indexPath;
-	// Åë½Å Ãß°¡
+	// í†µì‹  ì¶”ê°€
 	if (isDrawer) {
 		SndPath(indexPath - 1, x, y, color, lineWidth);
 	}
@@ -75,25 +75,25 @@ extern void ContinuePath(int x, int y) {
 
 #define MAX_NPICK_WIDTH 6
 
-// Ã¢¿¡ ±âº» UI ±×¸®´Â ÇÔ¼ö
+// ì°½ì— ê¸°ë³¸ UI ê·¸ë¦¬ëŠ” í•¨ìˆ˜
 extern void DrawPallete() {
 	int i;
 	XGCValues gv;
 
-	// Äµ¹ö½º ¿µ¿ª µå·Î¿ì
-	XSetForeground(dpy, gc, BlackPixel(dpy, 0)); // ÀÓ½Ã·Î ±×¸± °Å´Ï±î static void SetForegroundToColor() »ç¿ëÇÏÁö ¾ÊÀ½
+	// ìº”ë²„ìŠ¤ ì˜ì—­ ë“œë¡œìš°
+	XSetForeground(dpy, gc, BlackPixel(dpy, 0)); // ì„ì‹œë¡œ ê·¸ë¦´ ê±°ë‹ˆê¹Œ static void SetForegroundToColor() ì‚¬ìš©í•˜ì§€ ì•ŠìŒ
 	gv.line_width = 4;
 	XChangeGC(dpy, gc, GCLineWidth, &gv);
 	XDrawRectangle(dpy, w, gc, CANVAS_X, CANVAS_Y, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-	// Á¤´ä ¿µ¿ª µå·Î¿ì
+	// ì •ë‹µ ì˜ì—­ ë“œë¡œìš°
 	XSetForeground(dpy, gc, UsrColorPixel("blue"));
 	gv.line_width = 4;
 	XChangeGC(dpy, gc, GCLineWidth, &gv);
 	XDrawRectangle(dpy, w, gc, PLAYER_X, PLAYER_Y, PLAYER_WIDTH, PLAYER_HEIGHT);
 
-	// Á¤´ä ¿µ¿ª ¹®ÀÚ
-	XSetForeground(dpy, gc, BlackPixel(dpy, 0)); // ÀÓ½Ã·Î ±×¸± °Å´Ï±î static void SetForegroundToColor() »ç¿ëÇÏÁö ¾ÊÀ½
+	// ì •ë‹µ ì˜ì—­ ë¬¸ì
+	XSetForeground(dpy, gc, BlackPixel(dpy, 0)); // ì„ì‹œë¡œ ê·¸ë¦´ ê±°ë‹ˆê¹Œ static void SetForegroundToColor() ì‚¬ìš©í•˜ì§€ ì•ŠìŒ
 	if (isDrawer) {
 		XDrawString(dpy, w, gc, 
 			PLAYER_X + (PLAYER_WIDTH / 5), 
@@ -106,7 +106,7 @@ extern void DrawPallete() {
 			"????????????? : guess what!", strlen("????????????? : guess what!"));
 	}
 
-	// ¹°°¨ ¿µ¿ª µå·Î¿ì: Èò»ö Â÷·Ê Á÷Àü±îÁö »ö±ò ¼ø¼­´ë·Î
+	// ë¬¼ê° ì˜ì—­ ë“œë¡œìš°: í°ìƒ‰ ì°¨ë¡€ ì§ì „ê¹Œì§€ ìƒ‰ê¹” ìˆœì„œëŒ€ë¡œ
 	for (i = 0; i< WHITE; i++) {
 		XSetForeground(dpy, gc, UsrColorPixel(color_name[i]));
 		XFillRectangle(dpy, w, gc, 
@@ -114,7 +114,7 @@ extern void DrawPallete() {
 			PALET_ITEM_WIDTH, PALET_ITEM_HEIGHT);
 	}
 
-	// ¹°°¨ ¿µ¿ª µå·Î¿ì: Èò»ö
+	// ë¬¼ê° ì˜ì—­ ë“œë¡œìš°: í°ìƒ‰
 	i = WHITE;
 	XSetForeground(dpy, gc, BlackPixel(dpy, 0));
 	gv.line_width = 1;
@@ -123,13 +123,13 @@ extern void DrawPallete() {
 		MARGIN + (PALET_AREA_X * i), MARGIN + PALET_AREA_Y,
 		PALET_ITEM_WIDTH, PALET_ITEM_HEIGHT);
 
-	// ¹°°¨ ¿µ¿ª µå·Î¿ì: CLEAR
+	// ë¬¼ê° ì˜ì—­ ë“œë¡œìš°: CLEAR
 	XSetFont(dpy, gc, XLoadFont(dpy, "fixed"));
 	XDrawString(dpy, w, gc, 
 		MARGIN + (PALET_AREA_X * (i + 1)), MARGIN + PALET_AREA_Y + 15, 
 		"CLEAR", 5);
 
-	// º×ÀÇ ±½±â µå·Î¿ì
+	// ë¶“ì˜ êµµê¸° ë“œë¡œìš°
 	for (i = 0; i< MAX_NPICK_WIDTH; i++) {
 		XSetForeground(dpy, gc, BlackPixel(dpy, 0));
 		gv.line_width = i * 5 + 5;
@@ -141,47 +141,47 @@ extern void DrawPallete() {
 			BRUSH_AREA_Y + (BRUSH_ITEM_HEIGHT / 2) + 1);
 	}
 
-	// ÀÌÀü ÄÜÅØ½ºÆ®·Î µÇµ¹¾Æ°£´Ù
+	// ì´ì „ ì½˜í…ìŠ¤íŠ¸ë¡œ ë˜ëŒì•„ê°„ë‹¤
 	SetForegroundToColor(color);
 	gv.line_width = lineWidth;
 	XChangeGC(dpy, gc, GCLineWidth, &gv);
 }
 
-// ´Ù½Ã µû¶ó ±×¸°´Ù
+// ë‹¤ì‹œ ë”°ë¼ ê·¸ë¦°ë‹¤
 extern void RepaintPath() {
-	int i; // ¹İº¹¹® Á¦¾î º¯¼ö
-	int contextColor = color; // µŞÁ¤¸® ÁØºñ: ÀÌ ÇÔ¼ö°¡ ³¡³ª¸é µ¹¾Æ°¥ °÷ 1 (½ºÅÃ ÇÁ·¹ÀÓÃ³·³ ½ÃÀÛÇÒ ¶§ ÇÑ´Ù)
-	int contextWidth = lineWidth;  // µŞÁ¤¸® ÁØºñ: ÀÌ ÇÔ¼ö°¡ ³¡³ª¸é µ¹¾Æ°¥ °÷ 2
+	int i; // ë°˜ë³µë¬¸ ì œì–´ ë³€ìˆ˜
+	int contextColor = color; // ë’·ì •ë¦¬ ì¤€ë¹„: ì´ í•¨ìˆ˜ê°€ ëë‚˜ë©´ ëŒì•„ê°ˆ ê³³ 1 (ìŠ¤íƒ í”„ë ˆì„ì²˜ëŸ¼ ì‹œì‘í•  ë•Œ í•œë‹¤)
+	int contextWidth = lineWidth;  // ë’·ì •ë¦¬ ì¤€ë¹„: ì´ í•¨ìˆ˜ê°€ ëë‚˜ë©´ ëŒì•„ê°ˆ ê³³ 2
 
 	SetForegroundToColor(pathColor[0]);
 	SetLineWidth(pathWidth[0]);
 	for (i = 1; i<indexPath; i++) {
-		if (path[i].x != -1) { // Áö±İ ÁöÁ¡ÀÌ ²÷¾îÁø Á¡(-1)ÀÌ ¾Æ´Ñ À¯È¿ÇÑ Á¡ÀÌ´Ï±î, ±×¸®±â¸¦ ½ÃÀÛÇÏ´Â ÁßÀÌ´øÁö ±×¸®´Â ÇÑ Áß°£ÀÌ´øÁö µÑ Áß ÇÏ³ª´Ù.
-			if (path[i - 1].x != -1) { // ÀÌÀü ÁöÁ¡µµ Áö±İ ÁöÁ¡µµ ²÷¾îÁø Á¡(-1)ÀÌ ¾Æ´Ï´Ï±î, º×Ä¥À» ÇÏ´Â Áß°£ÀÌ´Ù.
-				XDrawLine(dpy, w, gc, path[i - 1].x, path[i - 1].y, path[i].x, path[i].y); // µÎ Á¡À» ÀÕ´Â ¼±À» µû¶ó º×Ä¥ÇÑ´Ù.
-			} else if (path[i - 1].x == -1) { // ÀÌÀü ÁöÁ¡Àº ²÷¾îÁ³°í Áö±İ ÁöÁ¡Àº ÀÖÀ¸´Ï±î, µÎÁ¡À» µû¶ó ÀÕ´Â ¼±À» ±×¸®±â ½ÃÀÛÇÏ´Â ¶§´Ù.
-				SetForegroundToColor(pathColor[i]); // º×À» µç´Ù.
+		if (path[i].x != -1) { // ì§€ê¸ˆ ì§€ì ì´ ëŠì–´ì§„ ì (-1)ì´ ì•„ë‹Œ ìœ íš¨í•œ ì ì´ë‹ˆê¹Œ, ê·¸ë¦¬ê¸°ë¥¼ ì‹œì‘í•˜ëŠ” ì¤‘ì´ë˜ì§€ ê·¸ë¦¬ëŠ” í•œ ì¤‘ê°„ì´ë˜ì§€ ë‘˜ ì¤‘ í•˜ë‚˜ë‹¤.
+			if (path[i - 1].x != -1) { // ì´ì „ ì§€ì ë„ ì§€ê¸ˆ ì§€ì ë„ ëŠì–´ì§„ ì (-1)ì´ ì•„ë‹ˆë‹ˆê¹Œ, ë¶“ì¹ ì„ í•˜ëŠ” ì¤‘ê°„ì´ë‹¤.
+				XDrawLine(dpy, w, gc, path[i - 1].x, path[i - 1].y, path[i].x, path[i].y); // ë‘ ì ì„ ì‡ëŠ” ì„ ì„ ë”°ë¼ ë¶“ì¹ í•œë‹¤.
+			} else if (path[i - 1].x == -1) { // ì´ì „ ì§€ì ì€ ëŠì–´ì¡Œê³  ì§€ê¸ˆ ì§€ì ì€ ìˆìœ¼ë‹ˆê¹Œ, ë‘ì ì„ ë”°ë¼ ì‡ëŠ” ì„ ì„ ê·¸ë¦¬ê¸° ì‹œì‘í•˜ëŠ” ë•Œë‹¤.
+				SetForegroundToColor(pathColor[i]); // ë¶“ì„ ë“ ë‹¤.
 				SetLineWidth(pathWidth[i]);
 			}
-		} else { /* Áö±İ ÁöÁ¡ÀÌ ²÷¾îÁø Á¡(-1)ÀÌ ¾Æ´Ñ À¯È¿ÇÑ Á¡ÀÌ´Ï±î, ±×¸®±â¸¦ Áß´ÜÇÑ »óÅÂ´Ù. º×À» ³»¸°´Ù. */ }
+		} else { /* ì§€ê¸ˆ ì§€ì ì´ ëŠì–´ì§„ ì (-1)ì´ ì•„ë‹Œ ìœ íš¨í•œ ì ì´ë‹ˆê¹Œ, ê·¸ë¦¬ê¸°ë¥¼ ì¤‘ë‹¨í•œ ìƒíƒœë‹¤. ë¶“ì„ ë‚´ë¦°ë‹¤. */ }
 	}
 
-	SetForegroundToColor(contextColor); // µŞÁ¤¸®
+	SetForegroundToColor(contextColor); // ë’·ì •ë¦¬
 	SetLineWidth(contextWidth);
 } // func
 
-// Äµ¹ö½º¿¡ ±×¸° °ÍÀ» Áö¿î´Ù
+// ìº”ë²„ìŠ¤ì— ê·¸ë¦° ê²ƒì„ ì§€ìš´ë‹¤
 extern void Clear() {
 	XClearArea(dpy, w, CANVAS_X, CANVAS_Y, CANVAS_WIDTH, CANVAS_HEIGHT, 0);
 	indexPath = 0;
-	// Åë½Å Ãß°¡
+	// í†µì‹  ì¶”ê°€
 	if (isDrawer) {
 		SndPath(-1, -1, -1, color, lineWidth);
 	}
 }
 
 
-// ÆÇº°
+// íŒë³„
 
 extern bool EventCursorIsWithinCanvas(XEvent xe) {
 	return (xe.xmotion.x > CANVAS_X && xe.xmotion.x < CANVAS_WIDTH + CANVAS_X)
@@ -200,14 +200,13 @@ extern bool EventCursorIsBeingClicked(XEvent xe) {
 	return xe.xmotion.state & Button1Mask;
 }
 
-// 
-¹öÆ°ÀÌ ´­·È´ÂÁö ¿©ºÎ ¹İÈ¯
+// ë²„íŠ¼ì´ ëˆŒë ¸ëŠ”ì§€ ì—¬ë¶€ ë°˜í™˜
 extern bool GetClearPick(XEvent xe) {
 	int i = MAX_COLOR;
 	return xe.xmotion.x > MARGIN + (BRUSH_AREA_X * i) && xe.xmotion.x < MARGIN + (BRUSH_AREA_X * i) + BRUSH_ITEM_WIDTH;
 }
 
-// ¸î ¹øÂ° ¹öÆ°ÀÌ ´­·È´ÂÁö ¹İÈ¯
+// ëª‡ ë²ˆì§¸ ë²„íŠ¼ì´ ëˆŒë ¸ëŠ”ì§€ ë°˜í™˜
 extern int GetColorPick(XEvent xe) {
 	int i;
 	for (i = 0; i < MAX_COLOR + 1; ++i) {
@@ -221,7 +220,7 @@ extern int GetColorPick(XEvent xe) {
 	return i;
 }
 
-// ¸î ¹øÂ° ¹öÆ°ÀÌ ´­·È´ÂÁö ¹İÈ¯
+// ëª‡ ë²ˆì§¸ ë²„íŠ¼ì´ ëˆŒë ¸ëŠ”ì§€ ë°˜í™˜
 extern int GetWidthPick(XEvent xe) {
 	int i;
 	for (i = 0; i < MAX_COLOR + 1; ++i) {
